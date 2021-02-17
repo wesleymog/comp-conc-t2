@@ -1,6 +1,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include "timer.h"
 #define swap(a, b) { int _h = a; a = b; b = _h; }
@@ -83,7 +84,6 @@ void partition(int* esq0, int* dir0, int** l1, int** r1, int** l2, int** r2) {
 
 void* thread_sort(void *arg) {
     int** par = (int**)arg;
-    printf("sou uma thread");
     quicksort(par[0], par[1]);
     free(arg);
     pthread_mutex_lock(&mutex);
@@ -142,19 +142,24 @@ void init(int* data, int len) {
     }
 }
 
-void test(int* data, int len) {
-    for (int i = 1; i < len; i++) {
-        if (data[i] < data[i - 1]) {
-            printf("ERROR\n");
-            break;
-        }
-    }
-}
-
 void print(int* data, int len) {
     for (int i = 0; i < len; i++) {
         printf("%d\n", data[i]);
     }
+}
+
+bool isSorted(int * start, int * end)
+{
+	start++;
+	if(start == end)
+		return true;
+	while(start != end)
+	{
+		if(*(start - 1) > *(start))
+			return false;
+		start++;  
+	}
+	return true;
 }
 
 int main(void) {
@@ -164,12 +169,19 @@ int main(void) {
 	pthread_mutex_init(&mutex, NULL);
     pthread_cond_init (&cond, NULL);
 
-    printf("Sorting %d million numbers with Quicksort ...\n",
-        TAM / 1000000);
+    printf("Sorting %d numbers with Quicksort ...\n",
+        TAM );
     GET_TIME(ini);
     ordena(data, TAM);
     GET_TIME(fim);
-    test(data, TAM);
+    if(isSorted(&data[0], &data[TAM]))
+	{
+		printf("Array is sorted\n");
+	}
+	else
+	{
+		printf("Array is not sorted\n");
+	}
     printf("Tempo concorrente: %lf\n" , fim-ini);
     return 0;
 }
