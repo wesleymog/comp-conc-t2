@@ -6,7 +6,7 @@
 #include "timer.h"
 #define swap(a, b) { int _h = a; a = b; b = _h; }
 #define min(a, b) ((a) < (b) ? (a) : (b))
-#define TAM (50 * 1000000)
+#define TAM (100000000)
 #define ordena3(a, b, c)              \
     if (b < a) {                        \
         if (c < a) {                    \
@@ -93,6 +93,16 @@ void* thread_sort(void *arg) {
     return NULL;
 }
 
+void quicksortnormal(int* esq, int* dir) {
+
+    int *l, *r;
+    while (dir - esq >= 50) {
+        partition(esq, dir, &l, &r, &esq, &dir);
+        quicksortnormal(l, r);
+    }
+    insert_sort(esq, dir);
+}
+
 void quicksort(int* esq, int* dir) {
 
     while (dir - esq >= 50) {
@@ -100,7 +110,6 @@ void quicksort(int* esq, int* dir) {
         partition(esq, dir, &l, &r, &esq, &dir);
 
         if (dir - esq > 100000 && n_threads < max_threads) {
-            // start a new thread - max_threads is a soft limit
             pthread_t thread;
             int** param = malloc(2 * sizeof(int*));
             param[0] = esq;
@@ -169,7 +178,7 @@ int main(void) {
 	pthread_mutex_init(&mutex, NULL);
     pthread_cond_init (&cond, NULL);
 
-    printf("Sorting %d numbers with Quicksort ...\n",
+    printf("Sorteando %d números com quicksort ...\n",
         TAM );
     GET_TIME(ini);
     ordena(data, TAM);
@@ -182,6 +191,12 @@ int main(void) {
 	{
 		printf("Array is not sorted\n");
 	}
+
     printf("Tempo concorrente: %lf\n" , fim-ini);
+    GET_TIME(ini);
+    quicksortnormal(data, data + TAM - 1);
+    GET_TIME(fim);
+
+    printf("Tempo simultaneo: %lf\n" , fim-ini);
     return 0;
 }
