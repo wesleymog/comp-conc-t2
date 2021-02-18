@@ -4,9 +4,10 @@
 #include <stdbool.h>
 #include <string.h>
 #include "timer.h"
+//muda o item do array a para a posição do b
 #define swap(a, b) { int _h = a; a = b; b = _h; }
-#define min(a, b) ((a) < (b) ? (a) : (b))
 #define TAM (100000000)
+// verifica entre o pivot, esq e direita e os ordena
 #define ordena3(a, b, c)              \
     if (b < a) {                        \
         if (c < a) {                    \
@@ -31,7 +32,9 @@ pthread_mutex_t mutex;
 pthread_cond_t cond;
 
 void quicksort(int* esq, int* dir);
-
+/*
+    insere as ordenações no array
+*/
 void insert_sort(int* esq, int* dir) {
 
     // coloca o menor na esquerda para poder começar  comparação do insert_sort
@@ -51,8 +54,10 @@ void insert_sort(int* esq, int* dir) {
         *(pj + 1) = h;
     }
 }
-
-void partition(int* esq0, int* dir0, int** l1, int** r1, int** l2, int** r2) {
+/*
+    realiza as partições do quicksort
+*/
+void partition(int* esq0, int* dir0, int** e1, int** d1, int** e2, int** d2) {
 
     int* esq = esq0 + 1;
     int* dir = dir0;
@@ -73,15 +78,17 @@ void partition(int* esq0, int* dir0, int** l1, int** r1, int** l2, int** r2) {
     *dir = piv;
 
     if (dir < mid) {
-        *l1 = esq0; *r1 = dir - 1;
-        *l2 = dir + 1; *r2 = dir0;
+        *e1 = esq0; *d1 = dir - 1;
+        *e2 = dir + 1; *d2 = dir0;
     }
     else {
-        *l1 = dir + 1; *r1 = dir0;
-        *l2 = esq0; *r2 = dir - 1;
+        *e1 = dir + 1; *d1 = dir0;
+        *e2 = esq0; *d2 = dir - 1;
     }
 }
-
+/*
+    Função das threads e que chama o quicksort para ordenar
+*/
 void* thread_sort(void *arg) {
     int** par = (int**)arg;
     quicksort(par[0], par[1]);
@@ -92,22 +99,26 @@ void* thread_sort(void *arg) {
     pthread_mutex_unlock(&mutex);
     return NULL;
 }
-
+// quicksort sequencial
 void quicksortnormal(int* esq, int* dir) {
 
-    int *l, *r;
+    int *e, *d;
     while (dir - esq >= 50) {
-        partition(esq, dir, &l, &r, &esq, &dir);
-        quicksortnormal(l, r);
+        partition(esq, dir, &e, &d, &esq, &dir);
+        quicksortnormal(e,d);
     }
     insert_sort(esq, dir);
 }
 
+/* 
+    realiza o quicksort concorrente 
+    chama uma nova thread para cada partição    
+*/
 void quicksort(int* esq, int* dir) {
 
     while (dir - esq >= 50) {
-        int *l, *r;
-        partition(esq, dir, &l, &r, &esq, &dir);
+        int *e, *d;
+        partition(esq, dir, &e, &d, &esq, &dir);
 
         if (dir - esq > 100000 && n_threads < max_threads) {
             pthread_t thread;
@@ -118,16 +129,16 @@ void quicksort(int* esq, int* dir) {
             n_threads += 1;
             pthread_mutex_unlock(&mutex);
             pthread_create(&thread, NULL, thread_sort, param);
-            esq = l;
-            dir = r;
+            esq = e;
+            dir = d;
         }
         else {
-            quicksort(l, r);
+            quicksort(e,d);
         }
     }
     insert_sort(esq, dir);
 }
-
+// função inicial para pedido de ordenação
 void ordena(int* data, int len) {
 
     max_threads = 8;
@@ -144,6 +155,7 @@ void ordena(int* data, int len) {
     pthread_mutex_unlock(&mutex);
 }
 
+//Função para inicializar o array
 void init(int* data, int len) {
 
     for (int i = 0; i < len; i++) {
@@ -151,13 +163,15 @@ void init(int* data, int len) {
     }
 }
 
+// printar a lista
 void print(int* data, int len) {
     for (int i = 0; i < len; i++) {
         printf("%d\n", data[i]);
     }
 }
 
-bool isSorted(int * start, int * end)
+// Função para checar se está ordenado
+bool isOrd(int * start, int * end)
 {
 	start++;
 	if(start == end)
@@ -174,7 +188,8 @@ bool isSorted(int * start, int * end)
 int main(void) {
 
     init(data, TAM);
-
+    int *data1 = data;
+    // inicialização
 	pthread_mutex_init(&mutex, NULL);
     pthread_cond_init (&cond, NULL);
 
@@ -183,20 +198,30 @@ int main(void) {
     GET_TIME(ini);
     ordena(data, TAM);
     GET_TIME(fim);
-    if(isSorted(&data[0], &data[TAM]))
+    // checando a ordenação
+    if(isOrd(&data[0], &data[TAM]))
 	{
-		printf("Array is sorted\n");
+		printf("Array está sorteado\n");
 	}
 	else
 	{
-		printf("Array is not sorted\n");
+		printf("Array não está sorteado\n");
 	}
 
-    printf("Tempo concorrente: %lf\n" , fim-ini);
+    printf("Tempo concorrente: %lf\n\n" , fim-ini);
     GET_TIME(ini);
-    quicksortnormal(data, data + TAM - 1);
+    quicksortnormal(data1, data1 + TAM - 1);
     GET_TIME(fim);
 
-    printf("Tempo simultaneo: %lf\n" , fim-ini);
+    // checando a ordenação
+    if(isOrd(&data[0], &data[TAM]))
+	{
+		printf("Array está sorteado\n");
+	}
+	else
+	{
+		printf("Array não está sorteado\n");
+	}
+    printf("Tempo sequencial: %lf\n" , fim-ini);
     return 0;
 }
